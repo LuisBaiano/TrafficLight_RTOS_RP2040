@@ -55,7 +55,7 @@ O sistema utiliza múltiplas tarefas FreeRTOS, cada uma responsável por um peri
 *   `vRgbLedTask`: Controla o LED RGB (semáforo de veículos).
 *   `vLedMatrixTask`: Controla a Matriz de LEDs (semáforo de pedestres).
 *   `vBuzzerTask`: Gera os sons de acessibilidade.
-*   `vDisplayTask`: Atualiza o display OLED (se habilitado).
+*   `vDisplayTask`: Atualiza o display OLED.
 
 ## Funcionalidades Implementadas
 
@@ -137,7 +137,7 @@ O sistema utiliza múltiplas tarefas FreeRTOS, cada uma responsável por um peri
     *   Observe o comportamento dos LEDs RGB e da Matriz de LEDs.
     *   Ouça os padrões do buzzer.
     *   Pressione o Botão A (GPIO 5) para alternar entre os modos Normal e Noturno.
-    *   *(Se habilitado)* Observe as informações no display OLED.
+    *   Observe as informações no display OLED.
 
 ## Estrutura do Código
 
@@ -172,4 +172,4 @@ O sistema utiliza múltiplas tarefas FreeRTOS, cada uma responsável por um peri
 
 ## Demonstrativo em Vídeo
 
-*(Insira aqui o link para um vídeo demonstrando o projeto funcionando, se disponível)*
+https://drive.google.com/drive/folders/1vGaaTsg9YIwUJLpP9wRaegxBNwc4cKm4?usp=sharing
