@@ -13,8 +13,19 @@ typedef enum {
     CARS_NIGHT_FLASHING      /**< Modo noturno: amarelo piscando. */
 } TrafficLight_states;
 
+const char* actual_state(TrafficLight_states state) {
+    switch (state) {
+        case CARS_GREEN_LIGHT:      return "Carro: Sinal Verde / Pedestre Vermelho";
+        case CARS_YELLOW_LIGHT:     return "Carro: Sinal Amarelo / Pedestre Vermelho";
+        case CARS_PED_RED_LIGHT:    return "Todos Vermelhos (Troca Segura)";
+        case CARS_RED_PEDS_WALK:    return "Carro: Sinal Vermelho / Pedestre: Sinal Verde (Andando)";
+        case CARS_RED_PEDS_FLASH:   return "Carro: Sinal Vermelho / Pedestre: Sinal Vermelho (Piscando)";
+        case CARS_NIGHT_FLASHING:   return "Modo Noturno (Amarelo Piscando)";
+        default:                    return "Semaforo com defeito";
+    }
+}
 
-volatile bool g_flagModoNoturno = false; //Flag global que indica se o modo noturno está ativado.
+volatile bool flagModoNoturno = false; //Flag global que indica se o modo noturno está ativado.
 volatile TrafficLight_states trafficLight_state = CARS_PED_RED_LIGHT; //Estado atual do semáforo. inicia com ambos os sinais em vermelho
 static ssd1306_t display; //controle do display
 
@@ -41,10 +52,9 @@ void vDisplayUpdateTask() {
     ssd1306_t *ssd = &display;
     char mode_str[15];
     char state_str[40];
-    printf("TASK: Display Update started (in main.c).\n");
 
     while (true) {
-        bool is_night_mode = g_flagModoNoturno;
+        bool is_night_mode = flagModoNoturno;
         TrafficLight_states current_state = trafficLight_state;
 
         // Define as strings a serem exibidas com base no modo e estado
@@ -54,11 +64,11 @@ void vDisplayUpdateTask() {
         } else {
             strcpy(mode_str, "MODO: NORMAL ");
             switch(current_state) {
-                case CARS_GREEN_LIGHT:         strcpy(state_str, "Carro: Verde    \nPed: Pare"); break;
-                case CARS_YELLOW_LIGHT:        strcpy(state_str, "Carro: Amarelo  \nPed: Pare"); break;
-                case CARS_PED_RED_LIGHT:       strcpy(state_str, "Carro: Vermelho \nPed: Pare"); break;
-                case CARS_RED_PEDS_WALK:       strcpy(state_str, "Carro: Vermelho \nPed: Siga"); break;
-                case CARS_RED_PEDS_FLASH:      strcpy(state_str, "Carro: Vermelho \nPed: Piscando"); break;
+                case CARS_GREEN_LIGHT:         strcpy(state_str, "Carro: Siga    \nPed: Pare"); break;
+                case CARS_YELLOW_LIGHT:        strcpy(state_str, "Carro: Atenção!  \nPed: Pare"); break;
+                case CARS_PED_RED_LIGHT:       strcpy(state_str, "Carro: Pare \nPed: Pare"); break;
+                case CARS_RED_PEDS_WALK:       strcpy(state_str, "Carro: Pare \nPed: Siga"); break;
+                case CARS_RED_PEDS_FLASH:      strcpy(state_str, "Carro: Pare \nPed: Piscando"); break;
                 default:                       strcpy(state_str, "Erro no semaforo"); break;
             }
         }
@@ -85,8 +95,8 @@ void vButtonTask() {
         // Verifica se o botão A foi pressionado
         if (button_a_pressed()) {
             // Inverte o estado do modo noturno
-            g_flagModoNoturno = !g_flagModoNoturno;
-            printf("Modo Noturno: %s\n", g_flagModoNoturno ? "ON" : "OFF");
+            flagModoNoturno = !flagModoNoturno;
+            printf("Modo Noturno: %s\n", flagModoNoturno ? "ON" : "OFF");
             // Toca um tom curto para indicar a mudança
             buzzer_play_tone(440, 30);
         }
@@ -104,12 +114,12 @@ void vGeneralControlTask() {
     TrafficLight_states current_state = CARS_PED_RED_LIGHT;
     trafficLight_state = current_state;
     uint32_t current_state_duration_ms = TIME_ALL_RED_MS;
-
     while (true) {
+        printf("ESTADO ATUAL: %s\n", actual_state(current_state));
         // Aguarda a duração do estado atual
         vTaskDelay(pdMS_TO_TICKS(current_state_duration_ms));
         // Lê o estado do modo noturno
-        bool night_mode_active = g_flagModoNoturno;
+        bool night_mode_active = flagModoNoturno;
         TrafficLight_states next_state;
 
         // Lógica para modo noturno
@@ -152,16 +162,13 @@ void vGeneralControlTask() {
                     next_state = CARS_RED_PEDS_FLASH;
                     break;
                 case CARS_RED_PEDS_FLASH:
-                    // Nota: TIME_CARS_REDYELLOW_MS parece um nome inadequado se leva ao VERDE.
-                    // Deveria ser talvez TIME_BEFORE_CARS_GREEN_MS ou similar.
-                    // Usando a duração configurada antes de ir para o verde.
-                    current_state_duration_ms = TIME_CARS_REDYELLOW_MS;
+                    current_state_duration_ms = TIME_ALL_RED_MS;
                     next_state = CARS_GREEN_LIGHT;
                     break;
                 default: // Estado de erro ou inesperado
                     printf("Erro na mudança dos estados\n");
-                    current_state = CARS_PED_RED_LIGHT; // Volta para um estado seguro
-                    current_state_duration_ms = TIME_ALL_RED_MS;
+                    current_state = CARS_YELLOW_LIGHT; // Volta para um estado seguro
+                    current_state_duration_ms = TIME_ALL_RED_MS; //tempo maior
                     next_state = CARS_PED_RED_LIGHT;
                     break;
             }
@@ -179,7 +186,7 @@ void vGeneralControlTask() {
  *        Acende as cores Verde, Amarelo ou Vermelho conforme o estado, ou pisca Amarelo no modo noturno.
  */
 void vRgbLedTask() {
-    bool yellow_flash_state = false; // Estado do pisca-pisca amarelo (ligado/desligado)
+    bool yellow_flash_state = false; // Estado do amarelo no modo noturno (ligado/desligado)
     uint32_t last_flash_time = 0; // Tempo do último pisca
 
     while(true) {
@@ -226,7 +233,6 @@ void vRgbLedTask() {
  *        Mostra "Ande" (Walk), "Pare" (Don't Walk) ou pisca "Pare", ou apaga no modo noturno.
  */
 void vLedMatrixTask() {
-    printf("TASK: LED Matrix started.\n");
     bool ped_flash_state = false; // Estado do pisca-pisca do pedestre (ligado/desligado)
     uint32_t last_ped_flash_time = 0; // Tempo do último pisca do pedestre
     // Guarda a fase anterior para detectar mudanças e reiniciar o pisca
@@ -237,13 +243,12 @@ void vLedMatrixTask() {
         TrafficLight_states tf_state = trafficLight_state;
         uint32_t current_tick_time = xTaskGetTickCount(); // Tempo atual em ticks
 
-        // Se a fase mudou, reinicia o estado do pisca e o tempo
+        // Se a fase muda, reinicia o estado do pisca e o tempo
         if (tf_state != last_known_phase) {
             // Garante que o pisca comece no estado correto (normalmente apagado no início do flash)
             ped_flash_state = (tf_state == CARS_RED_PEDS_FLASH) ? false : true; // Inicia piscando ou mostra estático
             last_ped_flash_time = current_tick_time; // Reseta o timer do pisca
             last_known_phase = tf_state; // Atualiza a última fase conhecida
-            printf("MATRIX: Phase changed to %d\n", tf_state); // Log da mudança
         }
 
         // Controla a matriz de LEDs com base no estado
@@ -262,7 +267,7 @@ void vLedMatrixTask() {
                 // Garante que se o estado for true (mostrar ícone), ele permaneça visível até o próximo flip
                 // (Esta condição pode ser redundante dependendo da implementação exata do `led_matrix_ped_dont_walk`)
                 else if (ped_flash_state != false) {
-                     led_matrix_ped_dont_walk(true);
+                    led_matrix_ped_dont_walk(true);
                 }
                 break;
             case CARS_NIGHT_FLASHING: // Modo Noturno: Matriz apagada
@@ -285,14 +290,13 @@ void vLedMatrixTask() {
  *        Usa lógica simplificada baseada em ciclos ON/OFF para diferentes fases.
  */
 void vBuzzerTask() {
-    printf("TASK: Buzzer Controller started (Simplified).\n");
 
     // Guarda o tick do FreeRTOS quando a fase que precisa de som começou.
     uint32_t phase_start_tick = 0;
     // Guarda a última fase conhecida para detectar mudanças.
     TrafficLight_states last_known_phase_buz = trafficLight_state;
     // Flag interna para decidir se o som deve ser tocado nesta iteração.
-    bool need_to_play_sound = false;
+    bool play_sound = false;
     // Define um tempo de espera fixo para o loop da tarefa (em ms).
     const uint32_t LOOP_DELAY_MS = 50;
     const TickType_t loop_delay_ticks = pdMS_TO_TICKS(LOOP_DELAY_MS);
@@ -301,68 +305,72 @@ void vBuzzerTask() {
     phase_start_tick = xTaskGetTickCount();
 
     while(true) {
-         // Lê a fase atual do semáforo.
-         TrafficLight_states current_phase = trafficLight_state;
-         // Obtém o tempo atual em ticks do FreeRTOS.
-         uint32_t current_tick = xTaskGetTickCount();
-         // Variáveis para guardar os parâmetros do som da fase atual.
-         uint32_t freq = 0;
-         uint32_t on_duration_ms = 0;
-         uint32_t off_duration_ms = 0;
-         uint32_t cycle_duration_ms = 0;
+        // Lê a fase atual do semáforo.
+        TrafficLight_states current_phase = trafficLight_state;
+        // Obtém o tempo atual em ticks do FreeRTOS.
+        uint32_t current_tick = xTaskGetTickCount();
+        // Variáveis para guardar os parâmetros do som da fase atual.
+        uint32_t freq = 0;
+        uint32_t on_duration_ms = 0;
+        uint32_t off_duration_ms = 0;
+        uint32_t cycle_duration_ms = 0;
 
-         // --- Resetar Timer na Mudança de Fase ---
-         if (current_phase != last_known_phase_buz) {
-              last_known_phase_buz = current_phase;
-              phase_start_tick = current_tick;
-              need_to_play_sound = false; // Começa silencioso
-              buzzer_play_tone(0, 0); // Garante que o buzzer está desligado
-         }
+        // --- Resetar Timer na Mudança de Fase ---
+        if (current_phase != last_known_phase_buz) {
+            last_known_phase_buz = current_phase;
+            phase_start_tick = current_tick;
+            play_sound = false; // Começa silencioso
+            buzzer_play_tone(0, 0); // Garante que o buzzer está desligado
+        }
 
-         // --- Determina os Parâmetros do Som para a Fase Atual ---
-         switch(current_phase) {
-             case CARS_RED_PEDS_WALK: // Pedestre Anda
-                 freq = BUZZER_WALK_FREQ;
-                 on_duration_ms = BUZZER_WALK_ON_MS;
-                 off_duration_ms = BUZZER_WALK_OFF_MS;
-                 break;
-             case CARS_RED_PEDS_FLASH: // Pedestre Pisca Vermelho
-                 freq = BUZZER_FLASH_FREQ;
-                 on_duration_ms = BUZZER_FLASH_ON_MS;
-                 off_duration_ms = BUZZER_FLASH_OFF_MS;
-                 break;
-             case CARS_NIGHT_FLASHING: // Noturno Piscante (som opcional)
-                 freq = BUZZER_NIGHT_FREQ; // Pode ser 0 se não houver som noturno
-                 on_duration_ms = BUZZER_NIGHT_ON_MS;
-                 off_duration_ms = BUZZER_NIGHT_OFF_MS;
-                 break;
-             default: // Fases silenciosas
-                 freq = 0;
-                 break;
-         }
+        // --- Determina os Parâmetros do Som para a Fase Atual ---
+        switch(current_phase) {
+            case CARS_RED_PEDS_WALK:
+                buzzer_play_tone(BUZZER_WALK_FREQ, BUZZER_WALK_ON_MS); // Teste bloqueante
+                vTaskDelay(pdMS_TO_TICKS(BUZZER_WALK_OFF_MS));        // Pausa bloqueante
+                break;
+            case CARS_RED_PEDS_FLASH:
+                buzzer_play_tone(BUZZER_FLASH_FREQ, BUZZER_FLASH_ON_MS); // Teste bloqueante
+                vTaskDelay(pdMS_TO_TICKS(BUZZER_FLASH_OFF_MS));         // Pausa bloqueante
+                break;
+            case CARS_NIGHT_FLASHING:
+                buzzer_play_tone(BUZZER_NIGHT_FREQ, BUZZER_NIGHT_ON_MS); // Teste bloqueante
+                vTaskDelay(pdMS_TO_TICKS(BUZZER_NIGHT_OFF_MS));        // Pausa bloqueante
+                break;
+            case CARS_GREEN_LIGHT:    // Carro Verde => Pedestre Pare
+            case CARS_YELLOW_LIGHT:   // Carro Amarelo => Pedestre Pare
+            case CARS_PED_RED_LIGHT:  // Ambos Vermelhos => Pedestre Pare
+                freq = BUZZER_STOP_FREQ;
+                on_duration_ms = BUZZER_STOP_ON_MS;
+                off_duration_ms = BUZZER_STOP_OFF_MS;
+                break;
+            default:
+                vTaskDelay(pdMS_TO_TICKS(BUZZER_TASK_BASE_DELAY_MS)); // Apenas pausa
+                break;
+        }
 
         // --- Decide se o som deve estar LIGADO ou DESLIGADO ---
         if (freq > 0) { // Se a fase deve ter som
-             cycle_duration_ms = on_duration_ms + off_duration_ms;
-             if (cycle_duration_ms > 0) { // Evita divisão por zero
-                 uint32_t elapsed_ticks_in_phase = current_tick - phase_start_tick;
-                 // Converte ticks para ms de forma segura
-                 uint32_t elapsed_ms_in_phase = (uint32_t)(((uint64_t)elapsed_ticks_in_phase * 1000) / configTICK_RATE_HZ);
-                 // Calcula a posição dentro do ciclo ON/OFF
-                 uint32_t time_in_current_cycle = elapsed_ms_in_phase % cycle_duration_ms;
-                 // Verifica se está na porção ON do ciclo
-                 need_to_play_sound = (time_in_current_cycle < on_duration_ms);
-             } else {
-                  // Ciclo inválido (on+off = 0), mas freq > 0? Assume som contínuo.
-                  need_to_play_sound = true;
-             }
+            cycle_duration_ms = on_duration_ms + off_duration_ms;
+            if (cycle_duration_ms > 0) { // Evita divisão por zero
+                uint32_t elapsed_ticks_in_phase = current_tick - phase_start_tick;
+                // Converte ticks para ms de forma segura
+                uint32_t elapsed_ms_in_phase = (uint32_t)(((uint64_t)elapsed_ticks_in_phase * 1000) / configTICK_RATE_HZ);
+                // Calcula a posição dentro do ciclo ON/OFF
+                uint32_t time_in_current_cycle = elapsed_ms_in_phase % cycle_duration_ms;
+                // Verifica se está na porção ON do ciclo
+                play_sound = (time_in_current_cycle < on_duration_ms);
+            } else {
+                // Ciclo inválido (on+off = 0), mas freq > 0? Assume som contínuo.
+                play_sound = true;
+            }
         } else { // Fase silenciosa
-             need_to_play_sound = false;
+            play_sound = false;
         }
 
         // --- Aciona o Buzzer ---
         // Liga ou desliga o PWM do buzzer sem bloquear.
-        buzzer_play_tone(need_to_play_sound ? freq : 0, 0);
+        buzzer_play_tone(play_sound ? freq : 0, 0);
 
         // --- Delay Fixo ---
         vTaskDelay(loop_delay_ticks);
@@ -379,10 +387,9 @@ int main() {
     init_system_all();
     // Mostra tela de inicialização no display
     display_startup_screen(&display);
-    printf("Creating tasks...\n");
-
+    printf("Tarefas inicializadas!");
     // Cria as tarefas do sistema com suas prioridades
-    xTaskCreate(vGeneralControlTask, "CtrlTask", STACK_SIZE_DEFAULT, NULL, PRIORIDADE_CONTROLLER, NULL);
+    xTaskCreate(vGeneralControlTask, "ControlTask", STACK_SIZE_DEFAULT, NULL, PRIORIDADE_CONTROLLER, NULL);
     xTaskCreate(vButtonTask, "ButtonTask", STACK_SIZE_DEFAULT, NULL, PRIORIDADE_BUTTONS, NULL);
     xTaskCreate(vRgbLedTask, "RgbLedTask", STACK_SIZE_DEFAULT, NULL, PRIORIDADE_RGB_LED, NULL);
     xTaskCreate(vLedMatrixTask, "MatrixTask", STACK_SIZE_DEFAULT, NULL, PRIORIDADE_MATRIX, NULL);
@@ -392,7 +399,6 @@ int main() {
     // Inicia o escalonador do FreeRTOS
     vTaskStartScheduler();
 
-    // O código abaixo nunca deve ser alcançado
     while(1);
-    //return 0; // Inacessível
+
 }

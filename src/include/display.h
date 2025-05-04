@@ -8,4 +8,4 @@
 void display_init(ssd1306_t *ssd); 
 void display_startup_screen(ssd1306_t *ssd);
 
-#endif // DISPLAY_Hs
+#endif // DISPLAY_H
