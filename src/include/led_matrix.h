@@ -6,7 +6,7 @@
 
 void led_matrix_init();
 void led_matrix_clear();
-void led_matrix_draw_walk_symbol();
-void led_matrix_draw_dont_walk_symbol(bool flash_state);
+void led_matrix_ped_walk();
+void led_matrix_ped_dont_walk(bool flash_state);
 
 #endif // LED_MATRIX_H

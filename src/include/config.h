@@ -4,6 +4,10 @@
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "FreeRTOS.h"
+#include "task.h"
 #include <stdbool.h>
 #include "FreeRTOSConfig.h" 
 #include "buttons.h"
@@ -11,12 +15,11 @@
 #include "led_matrix.h"
 
 
-
 #define LED_RED_PIN     13 
 #define LED_GREEN_PIN   11 
 #define LED_BLUE_PIN    12 
 
-// Buttons
+// Botões
 #define BUTTON_A_PIN    5 // troca de modo
 #define BUTTON_B_PIN    6 
 
@@ -28,7 +31,7 @@
 #define MATRIX_SIZE       25
 #define MATRIX_DIM        5
 
-// I2C Display
+// Display
 #define I2C_PORT i2c1
 #define I2C_SDA_PIN 14
 #define I2C_SCL_PIN 15
@@ -70,8 +73,8 @@
 #define MATRIX_TASK_DELAY_MS       100
 #define BUZZER_TASK_BASE_DELAY_MS  50
 
-// --- Task Configuration ---
-// Priorities
+
+// prioridades
 #define PRIORIDADE_CONTROLLER     (tskIDLE_PRIORITY + 4)
 #define PRIORIDADE_BUTTONS        (tskIDLE_PRIORITY + 3)
 #define PRIORIDADE_RGB_LED        (tskIDLE_PRIORITY + 2)
@@ -79,7 +82,7 @@
 #define PRIORIDADE_BUZZER         (tskIDLE_PRIORITY + 1)
 #define PRIORIDADE_DISPLAY        (tskIDLE_PRIORITY + 0)
 
-// Stack Sizes
+//tamanho das stacks
 #define STACK_MULTIPLIER_DEFAULT  2
 #define STACK_MULTIPLIER_DISPLAY  4
 #define STACK_SIZE_DEFAULT        (configMINIMAL_STACK_SIZE * STACK_MULTIPLIER_DEFAULT)

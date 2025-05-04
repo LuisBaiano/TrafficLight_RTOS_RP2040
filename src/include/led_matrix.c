@@ -66,24 +66,24 @@ static void led_active_position(int lin, int col, uint32_t color) {
     }
 }
 
-// --- Public API Functions ---
+//inicia a matriz
 void led_matrix_init() {
     uint offset = pio_add_program(pio_instance, &led_matrix_program);
     led_matrix_program_init(pio_instance, pio_sm, offset, MATRIX_WS2812_PIN);
     led_matrix_clear();
 }
 
+//apaga os leds da matriz
 void led_matrix_clear() {
     uint32_t pio_black = color_to_pio_format(COLOR_BLACK, 1.0f);
-    // Clear the logical buffer
     for (int i = 0; i < MATRIX_SIZE; ++i) {
         pixel_buffer[i] = pio_black;
     }
     update_matrix();
 }
 
-// Desenha um 'boneco' andando em cor verde
-void led_matrix_draw_walk_symbol() {
+// Desenha um pedestre andando em cor verde
+void led_matrix_ped_walk() {
     uint32_t pio_green = color_to_pio_format(COLOR_GREEN, 0.25f);
     uint32_t pio_black = color_to_pio_format(COLOR_BLACK, 1.0f);
 
@@ -104,8 +104,8 @@ void led_matrix_draw_walk_symbol() {
     update_matrix();
 }
 
-// Desenha um x para proibido passar
-void led_matrix_draw_dont_walk_symbol(bool flash_state) {
+// Desenha um pedestre parado em vermelho
+void led_matrix_ped_dont_walk(bool flash_state) {
     uint32_t pio_red = flash_state ? color_to_pio_format(COLOR_RED, 0.25f) : color_to_pio_format(COLOR_BLACK, 1.0f);
     uint32_t pio_black = color_to_pio_format(COLOR_BLACK, 1.0f);
     
