@@ -65,8 +65,7 @@ O sistema utiliza múltiplas tarefas FreeRTOS, cada uma responsável por um peri
 ✅ Sincronização entre os ciclos de veículos e pedestres.
 ✅ Implementação de Modo Noturno (Amarelo piscante para veículos, matriz apagada, som lento).
 ✅ Leitura do Botão A (GPIO 5) via Interrupção (IRQ) com Debounce para alternar entre Modo Normal e Noturno.
-✅ Uso de flag global volátil (`g_flagModoNoturno`, `g_intersectionPhase`) para comunicação entre tarefas (conforme restrição).
-✅ Proteção básica de acesso às flags globais com `taskENTER/EXIT_CRITICAL()`.
+✅ Uso de flag global volátil (`g_flagModoNoturno`, `TrafficLight_states trafficLight_state`) para comunicação entre tarefas (conforme restrição).
 ✅ Geração de sons distintos no buzzer (via PWM) para fases de pedestre ("Ande", "Pare Piscando") e Modo Noturno.
 ✅ Exibição do modo e estado atual no display OLED SSD1306 (I2C). *(Funcionalidade comentada na versão de teste)*.
 ✅ Uso de múltiplas tarefas FreeRTOS dedicadas (Controller, Button, RGB LED, Matrix, Buzzer, Display).
@@ -78,21 +77,21 @@ O sistema utiliza múltiplas tarefas FreeRTOS, cada uma responsável por um peri
 
 *(Baseado nos requisitos originais do projeto de Semáforo)*
 
-1.  **Implementar Semáforo Inteligente:** Sim, implementa a lógica com dois modos.
-2.  **Dois Modos Distintos:** Sim, Normal e Noturno com comportamentos diferentes.
-3.  **Utilizar Apenas Tarefas FreeRTOS:** Sim, a lógica é distribuída em múltiplas tarefas. (Nota: Botões usam ISR para detecção inicial).
-4.  **Sem Filas, Semáforos ou Mutexes:** Sim, a comunicação principal é via flags globais voláteis. (Nota: `taskENTER/EXIT_CRITICAL` usado para proteção mínima).
+1.  **Implementar Semáforo Inteligente:** implementa a lógica com dois modos.
+2.  **Dois Modos Distintos:** Normal e Noturno com comportamentos diferentes.
+3.  **Utilizar Apenas Tarefas FreeRTOS:** a lógica é distribuída em múltiplas tarefas. (Nota: Botões usam ISR para detecção inicial).
+4.  **Sem Filas, Semáforos ou Mutexes:** a comunicação principal é via flags globais voláteis.
 5.  **Representado por:**
-    *   **Matriz de LEDs:** Sim, usada para pedestres (Walk/Don't Walk piscando).
-    *   **LED RGB:** Sim, usado para semáforo de veículos (R/G/Y).
-    *   **Display:** Sim, exibe modo/estado (pode ser comentado para teste).
-    *   **Buzzer:** Sim, usado para feedback sonoro de acessibilidade.
-6.  **Modo Normal:** Sim, implementa o ciclo Veicular e Pedestre com sons correspondentes.
-7.  **Modo Noturno:** Sim, implementa Amarelo piscante (veicular) e som lento, com matriz apagada.
-8.  **Alternar com Botão A:** Sim, implementado com IRQ, debounce e flag global.
-9.  **Flag Global Modificada por Tarefa:** Sim, `g_flagModoNoturno` (pela ButtonTask) e `TrafficLight_states trafficLight_state` (pela ControllerTask).
-10. **Sinais Sonoros Distintos:** Sim, padrões diferentes para Pedestre Anda, Pedestre Pisca e Modo Noturno.
-11. **Requisito Implícito (Task por Periférico):** Sim, a estrutura final dedica tarefas para Botão, LED RGB, Matriz, Buzzer, Display, além da tarefa Controladora.
+    *   **Matriz de LEDs:** usada para pedestres (Walk/Don't Walk piscando).
+    *   **LED RGB:** usado para semáforo de veículos (R/G/Y).
+    *   **Display:** exibe modo/estado (pode ser comentado para teste).
+    *   **Buzzer:** usado para feedback sonoro de acessibilidade.
+6.  **Modo Normal:** implementa o ciclo Veicular e Pedestre com sons correspondentes.
+7.  **Modo Noturno:** implementa Amarelo piscante (veicular) e som lento, com matriz apagada.
+8.  **Alternar com Botão A:** implementado com IRQ, debounce e flag global.
+9.  **Flag Global Modificada por Tarefa:** `g_flagModoNoturno` (pela ButtonTask) e `TrafficLight_states trafficLight_state` (pela ControllerTask).
+10. **Sinais Sonoros Distintos:** padrões diferentes para Pedestre Anda, Pedestre Pisca e Modo Noturno.
+11. **Requisito Implícito (Task por Periférico):** a estrutura final dedica tarefas para Botão, LED RGB, Matriz, Buzzer, Display, além da tarefa Controladora.
 
 ## Como Executar
 
